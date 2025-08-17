@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Swift</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(to bottom, #87ceeb, #fff);
+      font-family: sans-serif;
+    }
+    canvas {
+      border: 3px solid #444;
+      background: #cceeff;
+    }
+    #message {
+      position: absolute;
+      top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    #letter {
+      display: none;
+      position: absolute;
+      top: 30%;
+      background: #fff0f5;
+      padding: 20px;
+      border: 2px solid #ff69b4;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      font-size: 18px;
+      text-align: center;
+      width: 60%;
+    }
+  </style>
+</head>
+<body>
+  <div id="message">Press SPACE to start</div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="letter">
+    <h2>Come Back To Me 💌</h2>
+    <p>I recreate this game since I remember na nagpapataasan tayo here
+        I miss you :( let's find our way back na. I miss us, please? 🤍 
+    </p>
+    <audio controls autoplay>
+      <source src="fortnight.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const message = document.getElementById("message");
+const letter = document.getElementById("letter");
+
+// bird physics
+let bird = { 
+  x: 50, 
+  y: 300, 
+  width: 34, 
+  height: 24, 
+  gravity: 0.25,  
+  lift: -5.5,     
+  velocity: 0 
+};
+
+let pipes = [];
+let frame = 0;
+let score = 0;
+let gameOver = false;
+let gameStarted = false;
+
+// draw bird
+function drawBird() {
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.ellipse(bird.x, bird.y, bird.width/2, bird.height/2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "orange";
+  ctx.stroke();
+
+  // eye
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.arc(bird.x+8, bird.y-5, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = "black";
+  ctx.beginPath();
+  ctx.arc(bird.x+9, bird.y-5, 2, 0, Math.PI*2);
+  ctx.fill();
+
+  // beak
+  ctx.fillStyle = "orange";
+  ctx.beginPath();
+  ctx.moveTo(bird.x+15, bird.y);
+  ctx.lineTo(bird.x+25, bird.y+3);
+  ctx.lineTo(bird.x+15, bird.y+6);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// draw pipes
+function drawPipes() {
+  ctx.fillStyle = "green";
+  pipes.forEach(pipe => {
+    ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+    ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
+    // shading
+    ctx.fillStyle = "#006400";
+    ctx.fillRect(pipe.x+pipe.width-5, 0, 5, pipe.top);
+    ctx.fillRect(pipe.x+pipe.width-5, canvas.height - pipe.bottom, 5, pipe.bottom);
+    ctx.fillStyle = "green";
+  });
+}
+
+function update() {
+  if (!gameStarted || gameOver) return;
+
+  frame++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Bird physics
+  bird.velocity += bird.gravity;
+  bird.y += bird.velocity;
+  drawBird();
+
+  // pipes spawn
+  if (frame % 100 === 0) {  
+    let gap = 140;          
+    let top = Math.random() * (canvas.height/2);
+    pipes.push({ 
+      x: canvas.width, 
+      top: top, 
+      bottom: canvas.height - (top + gap), 
+      width: 55,
+      scored: false   // new flag
+    });
+  }
+
+  // move + score pipes
+  pipes.forEach(pipe => { 
+    pipe.x -= 2;
+
+    // ✅ scoring logic
+    if (!pipe.scored && pipe.x + pipe.width < bird.x - bird.width/2) {
+      score++;
+      pipe.scored = true;
+    }
+  });
+
+  drawPipes();
+
+  // collision
+  for (let pipe of pipes) {
+    if (
+      bird.x + bird.width/2 > pipe.x &&
+      bird.x - bird.width/2 < pipe.x + pipe.width &&
+      (bird.y - bird.height/2 < pipe.top || bird.y + bird.height/2 > canvas.height - pipe.bottom)
+    ) {
+      endGame();
+    }
+  }
+  if (bird.y + bird.height/2 >= canvas.height) {
+    endGame();
+  }
+
+  // draw score
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 30);
+
+  requestAnimationFrame(update);
+}
+
+function endGame() {
+  gameOver = true;
+  message.textContent = "Game Over 💔";
+  letter.style.display = "block";
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    if (!gameStarted) {
+      gameStarted = true;
+      message.textContent = "";
+      update();
+    }
+    if (!gameOver) {
+      bird.velocity = bird.lift; // flap up
+    }
+  }
+});
+</script>
+</body>
+</html>
